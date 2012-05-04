@@ -4,21 +4,15 @@
 #include <highgui.h>
 #include "mandelbrot.h"
 
-#if 1
 #define RES_X 32768
 #define RES_Y 18432
-#define NUM_ITER 1<<15
-#else
-#define RES_X 4096
-#define RES_Y 2304
-#define NUM_ITER 1<<10
-#endif
+#define NUM_ITER 1<<12
 
 #define COLOR_DENSITY_NUM 80000
 #define COLOR_DENSITY_DEN 1
 
 int main(int argc, char **argv) {
-    IplImage *img;
+    IplImage *img, *scaled;
     float *region;
     size_t i;
 
@@ -43,26 +37,52 @@ int main(int argc, char **argv) {
     fread(colors, 3, numcolors, colorsfile);
     // Create an 8-bit 1-channel image
     img = cvCreateImage(cvSize(RES_X, RES_Y), IPL_DEPTH_8U, 3);
-    region = (float*) create_mandelbrot(RES_X, RES_Y, -0.651172, 0.59668, -0.43584, 0.711035, NUM_ITER);
-    if(!region || !img) {
+    scaled = cvCreateImage(cvSize(8192, 4608), IPL_DEPTH_8U, 3);
+    if(!img | !scaled) {
         fprintf(stderr, "Memory allocation error.\n");
         exit(1);
     }
-    printf("Writing file...\n");
-    for(i=0;i<RES_X * RES_Y;i++) {
-        if(region[i] < 0) { // Convergence
-            img->imageData[3*i] = 0;
-            img->imageData[3*i+1] = 0;
-            img->imageData[3*i+2] = 0;
-        }
-        else {
-            size_t j = (size_t) ((COLOR_DENSITY_NUM*region[i]/COLOR_DENSITY_DEN)) % numcolors;
-            img->imageData[3*i] = colors[3*j];
-            img->imageData[3*i+1] = colors[3*j+1];
-            img->imageData[3*i+2] = colors[3*j+2];
+
+    float width = 3.2/256;
+    float height = 1.8/256;
+    char filename[128];
+    int imageno=0;
+    for(float min_y=-0.45; min_y < -0.3375; min_y += height) {
+        for(float min_x=-0.8; min_x < -0.6; min_x += width) {
+            region = (float*) create_mandelbrot(RES_X, RES_Y, min_x, min_y, min_x + width, min_y + height, NUM_ITER);
+            if(!region) {
+                fprintf(stderr, "Memory allocation error.\n");
+                exit(1);
+            }
+            int converged = 0;
+            int diverged = 0;
+            for(i=0;i<RES_X * RES_Y;i++) {
+                if(region[i] < 0) { // Convergence
+                    img->imageData[3*i] = 0;
+                    img->imageData[3*i+1] = 0;
+                    img->imageData[3*i+2] = 0;
+                    converged++;
+                }
+                else {
+                    size_t j = (size_t) ((COLOR_DENSITY_NUM*region[i]/COLOR_DENSITY_DEN)) % numcolors;
+                    img->imageData[3*i] = colors[3*j];
+                    img->imageData[3*i+1] = colors[3*j+1];
+                    img->imageData[3*i+2] = colors[3*j+2];
+                    diverged++;
+                }
+            }
+            free(region);
+
+            // Only write out interesting parts of the Mandelbrot set
+            if((diverged != RES_X * RES_Y) && (converged != RES_X * RES_Y)) {
+                snprintf(filename, 128, "image-%d.png", imageno);
+                cvResize(img, scaled, CV_INTER_AREA);
+                cvSaveImage(filename, scaled, 0);
+                printf("File %s written. Starts at coordinates (%f, %f)\n", filename, min_x, min_y);
+            }
+            imageno++;
         }
     }
-    free(region);
-    cvSaveImage("foo.png", img, 0);
+    cvReleaseImage(&scaled);
     cvReleaseImage(&img);
 }
