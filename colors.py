@@ -20,19 +20,19 @@ parser.add_argument("-o", metavar="out", nargs=1, dest="out",
                     type=argparse.FileType("wb"), required=True)
 
 parser.add_argument("-n", metavar="numcolors", nargs=1, dest="numcolors",
-                    type=int, default=10000)
+                    type=int, default=[10000])
 
 parser.add_argument("-s", metavar="saturation", nargs=1, dest="saturation",
-                    type=float, default=0.9)
+                    type=float, default=[0.9])
 
 parser.add_argument("-v", metavar="value", nargs=1, dest="value", type=float,
-                    default=1.0)
+                    default=[1.0])
 
 args = parser.parse_args(sys.argv[1:])
 
 for i in xrange(args.numcolors[0]):
     for comp in colorsys.hsv_to_rgb((1.0*i)/args.numcolors[0],
-                                    args.saturation, args.value):
+                                    args.saturation[0], args.value[0]):
         
 
         args.out[0].write(chr(int(comp*255)))
