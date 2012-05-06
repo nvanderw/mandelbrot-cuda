@@ -20,7 +20,7 @@ parser.add_argument("-o", metavar="out", nargs=1, dest="out",
                     type=argparse.FileType("wb"), required=True)
 
 parser.add_argument("-n", metavar="numcolors", nargs=1, dest="numcolors",
-                    type=int, default=[10000])
+                    type=int, default=[1000000])
 
 parser.add_argument("-s", metavar="saturation", nargs=1, dest="saturation",
                     type=float, default=[0.9])

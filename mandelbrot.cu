@@ -58,9 +58,6 @@ extern "C" float *create_mandelbrot(int res_x, int res_y, float min_x, float min
 
 
     for(int start = 0; start <= (size - jobsize); start += jobsize) {
-        fprintf(stderr,
-                "Starting job at offset=%d with %d blocks of %d threads.\n",
-                start, blocks.x, threadsPerBlock.x);
         mandelbrot<<<blocks, threadsPerBlock>>>(d_region, start, make_int2(res_x, res_y), boundary, iter);
         if(cudaMemcpy(&region[start], d_region, job_bytes, cudaMemcpyDeviceToHost) != cudaSuccess)
             goto cleanup1;
